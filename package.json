@@ -2,12 +2,16 @@
   "name": "jfrtik",
   "version": "1.0.0",
   "description": "A proxy API to fetch TikTok video info using native Node.js",
-  "main": "api/server.js",
+  "main": "api/downloader.js",
   "scripts": {
-    "start": "node api/server.js"
+    "start": "node api/downloader.js"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
+  },
+  "dependencies": {
+    "puppeteer-core": "^22.0.0",
+    "@sparticuz/chromium": "^121.0.0"
   },
   "license": "MIT"
 }
