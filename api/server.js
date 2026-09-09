@@ -17,13 +17,19 @@ function fetchUrl(urlStr, redirects = 0) {
       path: parsedUrl.pathname + parsedUrl.search,
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
         'Cache-Control': 'max-age=0',
+        // Add a common TikTok cookie (optional, improves reliability)
+        'Cookie': 'tt_webid_v2=7020568976118589446; tt_webid=7020568976118589446; msToken=YOUR_MSTOKEN_HERE;',
       },
     };
 
@@ -31,7 +37,7 @@ function fetchUrl(urlStr, redirects = 0) {
       // Handle redirects
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         const redirectUrl = new URL(res.headers.location, urlStr).toString();
-        res.resume(); // discard body
+        res.resume();
         resolve(fetchUrl(redirectUrl, redirects + 1));
         return;
       }
@@ -41,7 +47,6 @@ function fetchUrl(urlStr, redirects = 0) {
         return;
       }
 
-      // Decompress response if needed
       let stream = res;
       const encoding = res.headers['content-encoding'];
       if (encoding === 'gzip') {
@@ -69,7 +74,7 @@ function fetchUrl(urlStr, redirects = 0) {
   });
 }
 
-// Extract video info from TikTok HTML
+// Extract video info from TikTok HTML using multiple possible JSON containers
 function extractVideoInfo(html) {
   const info = {
     url: null,
@@ -109,92 +114,125 @@ function extractVideoInfo(html) {
     isAd: false,
   };
 
-  // Try to find JSON in <script id="SIGI_STATE"> or similar
-  const sigiStateRegex = /<script[^>]*id="SIGI_STATE"[^>]*>([\s\S]*?)<\/script>/;
-  const sigiMatch = html.match(sigiStateRegex);
-  if (sigiMatch) {
-    try {
-      const data = JSON.parse(sigiMatch[1]);
-      const videoModule = data?.ItemModule;
-      const userModule = data?.UserModule;
-      const musicModule = data?.MusicModule;
-      if (videoModule) {
+  // Try multiple patterns to locate JSON data
+  const patterns = [
+    // Pattern 1: <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">...</script>
+    {
+      name: '__UNIVERSAL_DATA_FOR_REHYDRATION__',
+      regex: /<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/,
+      parser: (data) => {
+        // In this structure, video data is under data["__DEFAULT_SCOPE__"]["webapp.video-detail"]["itemInfo"]["itemStruct"]
+        const defaultScope = data?.['__DEFAULT_SCOPE__'];
+        if (!defaultScope) return null;
+        const videoDetail = defaultScope['webapp.video-detail'];
+        const itemStruct = videoDetail?.itemInfo?.itemStruct;
+        return itemStruct;
+      }
+    },
+    // Pattern 2: <script id="SIGI_STATE" type="application/json">...</script>
+    {
+      name: 'SIGI_STATE',
+      regex: /<script[^>]*id="SIGI_STATE"[^>]*>([\s\S]*?)<\/script>/,
+      parser: (data) => {
+        const videoModule = data?.ItemModule;
+        if (!videoModule) return null;
         const videoId = Object.keys(videoModule)[0];
-        if (videoId) {
-          const item = videoModule[videoId];
-          info.id = item.id;
-          info.description = item.desc;
-          info.createTime = item.createTime;
-          info.isAd = item.isAd || false;
+        return videoId ? videoModule[videoId] : null;
+      }
+    },
+    // Pattern 3: window._SIG_I_H_ = {...};
+    {
+      name: 'window._SIG_I_H_',
+      regex: /window\._SIG_I_H_\s*=\s*({[\s\S]*?});/,
+      parser: (data) => {
+        const videoModule = data?.ItemModule;
+        if (!videoModule) return null;
+        const videoId = Object.keys(videoModule)[0];
+        return videoId ? videoModule[videoId] : null;
+      }
+    },
+    // Pattern 4: window.__INIT_PROPS__ = {...}; (alternative)
+    {
+      name: 'window.__INIT_PROPS__',
+      regex: /window\.__INIT_PROPS__\s*=\s*({[\s\S]*?});/,
+      parser: (data) => {
+        const videoData = data?.['/video/:id']?.videoData;
+        return videoData?.itemInfo?.itemStruct || null;
+      }
+    }
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern.regex);
+    if (match) {
+      try {
+        const json = JSON.parse(match[1]);
+        const item = pattern.parser(json);
+        if (item) {
+          // Now populate info from item
+          info.id = item.id || item.video?.id || null;
+          info.description = item.desc || item.description || null;
+          info.createTime = item.createTime || item.create_time || null;
+          info.isAd = item.isAd || item.is_ad || false;
+
+          // Stats
+          const stats = item.stats || item.statistics || {};
           info.statistics = {
-            diggCount: item.stats?.diggCount || 0,
-            shareCount: item.stats?.shareCount || 0,
-            commentCount: item.stats?.commentCount || 0,
-            playCount: item.stats?.playCount || 0,
+            diggCount: stats.diggCount || stats.digg_count || 0,
+            shareCount: stats.shareCount || stats.share_count || 0,
+            commentCount: stats.commentCount || stats.comment_count || 0,
+            playCount: stats.playCount || stats.play_count || 0,
           };
+
+          // Video details
+          const video = item.video || {};
           info.video = {
-            cover: item.video?.cover,
-            dynamicCover: item.video?.dynamicCover,
-            playAddr: item.video?.playAddr,
-            downloadAddr: item.video?.downloadAddr,
-            duration: item.video?.duration,
-            ratio: item.video?.ratio,
-            format: item.video?.format,
+            cover: video.cover || video.coverUrl || null,
+            dynamicCover: video.dynamicCover || null,
+            playAddr: video.playAddr || video.play_addr?.url_list?.[0] || null,
+            downloadAddr: video.downloadAddr || video.download_addr?.url_list?.[0] || null,
+            duration: video.duration || null,
+            ratio: video.ratio || null,
+            format: video.format || null,
           };
-        }
-      }
-      if (userModule && info.id) {
-        const authorId = data?.ItemModule?.[info.id]?.authorId;
-        if (authorId && userModule[authorId]) {
-          const user = userModule[authorId];
+
+          // Author
+          const author = item.author || {};
           info.author = {
-            id: user.id,
-            uniqueId: user.uniqueId,
-            nickname: user.nickname,
-            avatarLarger: user.avatarLarger,
-            signature: user.signature,
-            verified: user.verified || false,
+            id: author.id || null,
+            uniqueId: author.uniqueId || author.unique_id || null,
+            nickname: author.nickname || null,
+            avatarLarger: author.avatarLarger || author.avatar_larger?.url_list?.[0] || null,
+            signature: author.signature || null,
+            verified: author.verified || false,
           };
-        }
-      }
-      if (musicModule && info.id) {
-        const musicId = data?.ItemModule?.[info.id]?.musicId;
-        if (musicId && musicModule[musicId]) {
-          const music = musicModule[musicId];
+
+          // Music
+          const music = item.music || {};
           info.music = {
-            id: music.id,
-            title: music.title,
-            playUrl: music.playUrl,
-            coverLarge: music.coverLarge,
-            authorName: music.authorName,
+            id: music.id || null,
+            title: music.title || null,
+            playUrl: music.playUrl || music.play_url?.url_list?.[0] || null,
+            coverLarge: music.coverLarge || music.cover_large?.url_list?.[0] || null,
+            authorName: music.authorName || music.author_name || null,
           };
+
+          return info;
         }
+      } catch (e) {
+        console.error(`Error parsing ${pattern.name} JSON:`, e.message);
       }
-      return info;
-    } catch (e) {
-      console.error('Error parsing SIGI_STATE JSON:', e);
     }
   }
 
-  // Alternative: try to find JSON in window._SIG_I_H_ or similar
-  const windowSigiRegex = /window\._SIG_I_H_\s*=\s*({[\s\S]*?});/;
-  const windowMatch = html.match(windowSigiRegex);
-  if (windowMatch) {
-    try {
-      const data = JSON.parse(windowMatch[1]);
-      // Structure may be similar; you can add similar extraction here if needed
-      // For brevity, we skip detailed extraction.
-    } catch (e) {
-      console.error('Error parsing window._SIG_I_H_ JSON:', e);
-    }
-  }
-
+  // If nothing found, log first 500 chars for debugging
+  console.error('No video data found. HTML snippet:', html.substring(0, 500));
   return info;
 }
 
 // Export the serverless function handler
 module.exports = async function handler(req, res) {
-  // Enable CORS (optional, adjust as needed)
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -205,7 +243,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Parse query parameters from req.url
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const tiktokUrl = requestUrl.searchParams.get('url');
 
@@ -216,7 +253,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Basic validation
   if (!/^https?:\/\/(www\.)?(tiktok\.com|vt\.tiktok\.com)\//i.test(tiktokUrl)) {
     res.statusCode = 400;
     res.setHeader('Content-Type', 'application/json');
@@ -227,6 +263,7 @@ module.exports = async function handler(req, res) {
   try {
     console.log(`Fetching ${tiktokUrl}`);
     const html = await fetchUrl(tiktokUrl);
+    console.log(`Received HTML length: ${html.length}`);
     const info = extractVideoInfo(html);
     info.url = tiktokUrl;
     res.statusCode = 200;
