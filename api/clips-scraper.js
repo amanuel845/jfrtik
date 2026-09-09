@@ -10,7 +10,7 @@ function fetchText(urlStr, redirects = 0) {
       reject(new Error('Too many redirects'));
       return;
     }
-    
+
     const parsedUrl = new URL(urlStr);
     const options = {
       hostname: parsedUrl.hostname,
@@ -30,7 +30,7 @@ function fetchText(urlStr, redirects = 0) {
         'Cache-Control': 'max-age=0',
       },
     };
-    
+
     const req = https.request(options, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         const redirectUrl = new URL(res.headers.location, urlStr).toString();
@@ -38,18 +38,18 @@ function fetchText(urlStr, redirects = 0) {
         resolve(fetchText(redirectUrl, redirects + 1));
         return;
       }
-      
+
       if (res.statusCode !== 200) {
         reject(new Error(`Request failed with status ${res.statusCode}`));
         return;
       }
-      
+
       let stream = res;
       const encoding = res.headers['content-encoding'];
       if (encoding === 'gzip') stream = res.pipe(zlib.createGunzip());
       else if (encoding === 'deflate') stream = res.pipe(zlib.createInflate());
       else if (encoding === 'br') stream = res.pipe(zlib.createBrotliDecompress());
-      
+
       const decoder = new StringDecoder('utf-8');
       let body = '';
       stream.on('data', (chunk) => body += decoder.write(chunk));
@@ -59,7 +59,7 @@ function fetchText(urlStr, redirects = 0) {
       });
       stream.on('error', reject);
     });
-    
+
     req.on('error', reject);
     req.end();
   });
@@ -81,7 +81,7 @@ function extractFromHtml(html) {
     canonicalUrl: null,
     rawJson: null,
   };
-  
+
   // 1. Try to find Next.js data (common for React-based sites)
   const nextDataRegex = /<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/;
   const nextMatch = html.match(nextDataRegex);
@@ -89,7 +89,6 @@ function extractFromHtml(html) {
     try {
       const json = JSON.parse(nextMatch[1]);
       data.rawJson = json;
-      // Try to navigate common Next.js structure
       const pageProps = json?.props?.pageProps;
       if (pageProps) {
         const videoData = pageProps.videoData || pageProps.data || pageProps;
@@ -108,14 +107,14 @@ function extractFromHtml(html) {
       console.error('Error parsing __NEXT_DATA__:', e.message);
     }
   }
-  
+
   // 2. Look for common meta tags (Open Graph, Twitter)
   const getMeta = (name) => {
     const regex = new RegExp(`<meta[^>]*(?:name|property)=["']${name}["'][^>]*content=["']([^"']*)["']`, 'i');
     const match = html.match(regex);
     return match ? match[1] : null;
   };
-  
+
   if (!data.title) data.title = getMeta('og:title') || getMeta('twitter:title');
   if (!data.description) data.description = getMeta('og:description') || getMeta('description');
   if (!data.cover) data.cover = getMeta('og:image') || getMeta('twitter:image');
@@ -124,7 +123,7 @@ function extractFromHtml(html) {
     const canonicalMatch = html.match(canonicalRegex);
     if (canonicalMatch) data.canonicalUrl = canonicalMatch[1];
   }
-  
+
   // 3. Look for JSON data in script tags (e.g., window.__INITIAL_STATE__)
   const stateRegex = /(?:window\.)?__INITIAL_STATE__\s*=\s*({[\s\S]*?});/;
   const stateMatch = html.match(stateRegex);
@@ -132,20 +131,19 @@ function extractFromHtml(html) {
     try {
       const json = JSON.parse(stateMatch[1]);
       if (!data.rawJson) data.rawJson = json;
-      // Try to find video data within
-      // (customize as needed)
+      // Try to find video data within (customize as needed)
     } catch (e) {}
   }
-  
+
   // 4. Look for <video> or <source> tags
   const videoTagRegex = /<video[^>]*src=["']([^"']*)["']/i;
   const videoTagMatch = html.match(videoTagRegex);
   if (!data.videoUrl && videoTagMatch) data.videoUrl = videoTagMatch[1];
-  
+
   const sourceTagRegex = /<source[^>]*src=["']([^"']*)["']/i;
   const sourceTagMatch = html.match(sourceTagRegex);
   if (!data.videoUrl && sourceTagMatch) data.videoUrl = sourceTagMatch[1];
-  
+
   return data;
 }
 
@@ -153,45 +151,39 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.end();
     return;
   }
-  
+
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const tiktokUrl = requestUrl.searchParams.get('url');
-  const directUrl = requestUrl.searchParams.get('direct');
   const debug = requestUrl.searchParams.get('debug') === '1';
-  
-  if (!tiktokUrl && !directUrl) {
+
+  if (!tiktokUrl) {
     res.statusCode = 400;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Missing "url" or "direct" parameter' }));
+    res.end(JSON.stringify({ error: 'Missing "url" query parameter (TikTok URL)' }));
     return;
   }
-  
-  let targetUrl;
-  if (directUrl) {
-    targetUrl = directUrl;
-  } else {
-    targetUrl = `https://clipssaver.com/tiktok-profile-viewer/${encodeURIComponent(tiktokUrl)}`;
-  }
-  
+
+  // Construct clipssaver URL as specified
+  const clipssaverUrl = `https://clipssaver.com/tiktok-profile-viewer/${encodeURIComponent(tiktokUrl)}`;
+
   try {
-    const html = await fetchText(targetUrl);
-    
+    const html = await fetchText(clipssaverUrl);
+
     if (debug) {
-      // Return raw HTML (or a snippet if too large)
       res.statusCode = 200;
       res.setHeader('Content-Type', 'text/plain');
-      res.end(html); // You can truncate with html.substring(0, 50000) if needed
+      res.end(html);
       return;
     }
-    
+
     const data = extractFromHtml(html);
-    data.source = targetUrl;
+    data.source = clipssaverUrl;
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(data, null, 2));
