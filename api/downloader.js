@@ -79,6 +79,7 @@ function extractDownloaderData(html) {
       regex: /<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/,
       parser: (data) => data?.['__DEFAULT_SCOPE__']?.['webapp.video-detail']?.itemInfo?.itemStruct,
       shareMetaParser: (data) => data?.['__DEFAULT_SCOPE__']?.['webapp.video-detail']?.shareMeta,
+      canonicalParser: (data) => data?.['__DEFAULT_SCOPE__']?.['seo.abtest']?.canonical || null,
     },
     {
       name: 'SIGI_STATE',
@@ -90,6 +91,7 @@ function extractDownloaderData(html) {
         return id ? vm[id] : null;
       },
       shareMetaParser: (data) => null,
+      canonicalParser: (data) => null,
     },
   ];
 
@@ -102,8 +104,10 @@ function extractDownloaderData(html) {
       const item = pattern.parser(json);
       if (!item) continue;
 
+      // Build the data object (same as before, plus canonicalUrl)
       const data = {
         id: item.id || null,
+        canonicalUrl: null,
         cover: item.video?.cover || item.video?.originCover || null,
         author: {
           id: item.author?.id || null,
@@ -120,7 +124,6 @@ function extractDownloaderData(html) {
             friendCount: item.authorStats?.friendCount || 0,
           },
         },
-        // Use statsV2 if available, otherwise fallback to stats
         stats: item.statsV2 ? {
           diggCount: parseInt(item.statsV2.diggCount || '0'),
           shareCount: parseInt(item.statsV2.shareCount || '0'),
@@ -151,7 +154,16 @@ function extractDownloaderData(html) {
         data.description = shareMeta.desc;
       }
 
-      // Collect quality variants
+      // Extract canonical URL
+      const canonical = pattern.canonicalParser ? pattern.canonicalParser(json) : null;
+      if (canonical) {
+        data.canonicalUrl = canonical;
+      } else if (data.id && data.author.uniqueId) {
+        // Fallback construction
+        data.canonicalUrl = `https://www.tiktok.com/@${data.author.uniqueId}/video/${data.id}`;
+      }
+
+      // ... rest of quality extraction (unchanged) ...
       if (item.video?.bitrateInfo && item.video.bitrateInfo.length > 0) {
         for (const info of item.video.bitrateInfo) {
           const qualityLabel = info.GearName || info.definition || info.QualityType || 'unknown';
