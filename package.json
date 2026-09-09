@@ -1,0 +1,13 @@
+{
+  "name": "jfrtik",
+  "version": "1.0.0",
+  "description": "A proxy API to fetch TikTok video info using native Node.js",
+  "main": "api/server.js",
+  "scripts": {
+    "start": "node api/server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "license": "MIT"
+}
