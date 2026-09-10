@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>urlToFile / FormData Test</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --text: #e0e0e0;
+      --text-secondary: #aaa;
+      --accent: #fe2c55;
+      --accent-hover: #ff4569;
+      --radius: 12px;
+      --border: #333;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    h1 { font-size: 1.2rem; text-align: center; margin-bottom: 4px; }
+    .wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .wrapper-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .url {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.7rem;
+      word-break: break-all;
+      color: var(--text);
+      padding: 8px;
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      max-height: 90px;
+      overflow-y: auto;
+    }
+    .status {
+      font-size: 0.75rem;
+      padding: 8px;
+      border-radius: 6px;
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--text-secondary);
+      min-height: 32px;
+    }
+    .status.error { color: #ff6b6b; }
+    .status.ok { color: #4ade80; }
+    .file-item {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 40px;
+      justify-content: center;
+    }
+    .file-item.empty { color: var(--text-secondary); }
+    .file-item .name {
+      color: #fff;
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .file-item .meta {
+      color: var(--text-secondary);
+      font-size: 0.7rem;
+    }
+    .thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #222;
+      margin-top: 4px;
+    }
+    .video-thumb {
+      width: 100%;
+      max-width: 160px;
+      aspect-ratio: 9/16;
+      border-radius: 6px;
+      background: #000;
+      margin-top: 4px;
+    }
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hover); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-secondary);
+    }
+    button.secondary:hover:not(:disabled) {
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+    }
+    .global-status {
+      font-size: 0.75rem;
+      padding: 10px;
+      border-radius: 8px;
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--text);
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>urlToFile / FormData Test</h1>
+
+  <!-- AVATAR WRAPPER -->
+  <div class="wrapper">
+    <div class="wrapper-title">Avatar</div>
+
+    <div>
+      <div class="section-label">URL</div>
+      <div class="url" id="avatarUrl"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Status</div>
+      <div class="status" id="avatarStatus">Idle.</div>
+    </div>
+
+    <div>
+      <div class="section-label">File</div>
+      <div class="file-item empty" id="avatarFile">No file built yet.</div>
+    </div>
+
+    <button id="buildAvatarBtn">Build Avatar File</button>
+  </div>
+
+  <!-- COVER WRAPPER -->
+  <div class="wrapper">
+    <div class="wrapper-title">Cover</div>
+
+    <div>
+      <div class="section-label">URL</div>
+      <div class="url" id="coverUrl"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Status</div>
+      <div class="status" id="coverStatus">Idle.</div>
+    </div>
+
+    <div>
+      <div class="section-label">File</div>
+      <div class="file-item empty" id="coverFile">No file built yet.</div>
+    </div>
+
+    <button id="buildCoverBtn">Build Cover File</button>
+  </div>
+
+  <!-- VIDEO WRAPPER -->
+  <div class="wrapper">
+    <div class="wrapper-title">Video</div>
+
+    <div>
+      <div class="section-label">URL</div>
+      <div class="url" id="videoUrl"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Status</div>
+      <div class="status" id="videoStatus">Idle.</div>
+    </div>
+
+    <div>
+      <div class="section-label">File</div>
+      <div class="file-item empty" id="videoFile">No file built yet.</div>
+    </div>
+
+    <button id="buildVideoBtn">Download Video</button>
+  </div>
+
+  <!-- GLOBAL CONTROLS -->
+  <div class="wrapper">
+    <div class="wrapper-title">Global</div>
+    <div class="section-label">FormData Summary</div>
+    <div class="global-status" id="globalStatus">FormData is empty.</div>
+    <button id="clearBtn" class="secondary">Clear All</button>
+  </div>
+
+<script>
+  const PROXY_API = 'https://cool-field-c6c0.amanuel4135.workers.dev';
+
+  const DATA = {
+    ownerUnique: 'jafernegery',
+    videoId: '7627212555110337812',
+    createTime: '1775848816',
+    avatarUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/be7209757d2b95bdaec0d7e935ff3814~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=7c2804f5&x-expires=1789182000&x-signature=GJaPK2lSxerS6QsK01vWLx5bck4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5',
+    coverUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oYAAKIA2Z50Arp3TxoisBi7CIAWBSwaKLEfDad~tplv-tiktokx-origin.image?dr=9636&x-expires=1789182000&x-signature=34LkylKzjwr3p9i9Zhiomr4WDvM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5',
+    videoUrl: 'https://v16-webapp-prime.us.tiktok.com/video/tos/alisg/tos-alisg-ve-0068c800-sg/o8AjDafDoIlMjHTIaTDeXsvpZCYABEqWFQBfEA/?a=1988&bti=ODszNWYuMDE6&&bt=265&ft=aEeq8qT0mIoPD12Khe7I3wURzcAbMeF~O5&mime_type=video_mp4&rc=OGY5ZjVmNzRnNzg4NDllNkBpM3Fubmw5cnFuOjMzODczNEBeYF42NF9eXzMxMzI0MGIzYSNzNGFqMmRzbmBhLS1kMTFzcw%3D%3D&expire=1789182075&l=20260910030035735BAC8CBD953E01589F&ply_type=2&policy=2&signature=4c81ee54a84a160a0d0d0cb219bdf4a3&tk=tt_chain_token&btag=e00088000',
+    canonicalUrl: 'https://www.tiktok.com/@jafernegery/video/7627212555110337812',
+  };
+
+  const avatarUrlEl = document.getElementById('avatarUrl');
+  const coverUrlEl = document.getElementById('coverUrl');
+  const videoUrlEl = document.getElementById('videoUrl');
+
+  const avatarStatus = document.getElementById('avatarStatus');
+  const coverStatus = document.getElementById('coverStatus');
+  const videoStatus = document.getElementById('videoStatus');
+
+  const avatarFileEl = document.getElementById('avatarFile');
+  const coverFileEl = document.getElementById('coverFile');
+  const videoFileEl = document.getElementById('videoFile');
+
+  const buildAvatarBtn = document.getElementById('buildAvatarBtn');
+  const buildCoverBtn = document.getElementById('buildCoverBtn');
+  const buildVideoBtn = document.getElementById('buildVideoBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const globalStatus = document.getElementById('globalStatus');
+
+  avatarUrlEl.textContent = DATA.avatarUrl;
+  coverUrlEl.textContent = DATA.coverUrl;
+  videoUrlEl.textContent = DATA.videoUrl;
+
+  const formData = new FormData();
+
+  function setStatus(el, msg, kind) {
+    el.textContent = msg;
+    el.classList.remove('error', 'ok');
+    if (kind === 'error') el.classList.add('error');
+    if (kind === 'ok') el.classList.add('ok');
+  }
+
+  function proxied(url) {
+    return `${PROXY_API}?url=${encodeURIComponent(url)}`;
+  }
+
+  // -------------------------------------------------------------
+  // createTime (Unix seconds) → milliseconds for File.lastModified.
+  // No Date.now() fallback: if createTime is missing or invalid, we
+  // throw so the caller knows the extracted data isn't usable.
+  // -------------------------------------------------------------
+  function getLastModified() {
+    const sec = Number(DATA.createTime);
+    if (!Number.isFinite(sec) || sec <= 0) {
+      throw new Error('createTime is missing or invalid in extracted data');
+    }
+    return sec * 1000;
+  }
+
+  async function urlToFile(url, filename, lastModifiedMs, fallbackType = 'application/octet-stream') {
+    if (!url) throw new Error('Missing URL');
+    const response = await fetch(proxied(url), { mode: 'cors' });
+
+    if (!response.ok) {
+      let details = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        details = body.details || body.error || details;
+      } catch {
+        try { details = await response.text(); } catch {}
+      }
+      throw new Error(`Proxy failed (${response.status}): ${details}`);
+    }
+
+    const blob = await response.blob();
+    const type = blob.type || fallbackType;
+    return new File([blob], filename, {
+      type,
+      lastModified: lastModifiedMs,
+    });
+  }
+
+  function formatBytes(n) {
+    if (!n) return '0 B';
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function renderFileCard(containerEl, file, previewUrl, kind) {
+    containerEl.classList.remove('empty');
+    containerEl.innerHTML = '';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'name';
+    nameEl.textContent = file.name;
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'meta';
+    metaEl.textContent = [
+      `type: ${file.type || '(none)'}`,
+      `size: ${formatBytes(file.size)}`,
+      `lastModified: ${new Date(file.lastModified).toISOString()}`,
+    ].join('  ·  ');
+
+    containerEl.appendChild(nameEl);
+    containerEl.appendChild(metaEl);
+
+    if (kind === 'image' && previewUrl) {
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.src = previewUrl;
+      img.alt = file.name;
+      containerEl.appendChild(img);
+    } else if (kind === 'video' && previewUrl) {
+      const vid = document.createElement('video');
+      vid.className = 'video-thumb';
+      vid.src = previewUrl;
+      vid.controls = true;
+      vid.muted = true;
+      vid.preload = 'metadata';
+      containerEl.appendChild(vid);
+    }
+  }
+
+  function resetFileCard(containerEl) {
+    containerEl.classList.add('empty');
+    containerEl.innerHTML = 'No file built yet.';
+  }
+
+  function listFormData() {
+    let count = 0;
+    const lines = ['FormData entries:'];
+    for (const [key, value] of formData.entries()) {
+      count++;
+      if (value instanceof File) {
+        lines.push(`  ${key} = File(${value.name}, ${formatBytes(value.size)}, ${value.type})`);
+        lines.push(`      lastModified = ${new Date(value.lastModified).toISOString()}`);
+      } else {
+        lines.push(`  ${key} = ${value}`);
+      }
+    }
+    if (count === 0) return 'FormData is empty.';
+    return lines.join('\n');
+  }
+
+  function refreshGlobalStatus() {
+    globalStatus.textContent = listFormData();
+  }
+
+  function ensureMetaFields() {
+    if (!formData.has('ownerUnique')) formData.append('ownerUnique', DATA.ownerUnique);
+    if (!formData.has('videoId')) formData.append('videoId', DATA.videoId);
+    if (!formData.has('createTime')) formData.append('createTime', DATA.createTime);
+  }
+
+  function disableAll(disabled) {
+    buildAvatarBtn.disabled = disabled;
+    buildCoverBtn.disabled = disabled;
+    buildVideoBtn.disabled = disabled;
+  }
+
+  async function buildAvatar() {
+    disableAll(true);
+    buildAvatarBtn.textContent = 'Building...';
+    setStatus(avatarStatus, 'Fetching avatar...', null);
+
+    try {
+      const lastModified = getLastModified();
+      const file = await urlToFile(
+        DATA.avatarUrl,
+        `jfrtik-${DATA.ownerUnique}.png`,
+        lastModified,
+        'image/png'
+      );
+      formData.delete('avatar');
+      formData.append('avatar', file, file.name);
+      ensureMetaFields();
+
+      setStatus(
+        avatarStatus,
+        `OK — ${file.name} (${formatBytes(file.size)})\n` +
+        `lastModified: ${new Date(file.lastModified).toISOString()}`,
+        'ok'
+      );
+      renderFileCard(avatarFileEl, file, DATA.avatarUrl, 'image');
+      refreshGlobalStatus();
+    } catch (err) {
+      setStatus(avatarStatus, `Error: ${err.message}`, 'error');
+      resetFileCard(avatarFileEl);
+    } finally {
+      disableAll(false);
+      buildAvatarBtn.textContent = 'Build Avatar File';
+    }
+  }
+
+  async function buildCover() {
+    disableAll(true);
+    buildCoverBtn.textContent = 'Building...';
+    setStatus(coverStatus, 'Fetching cover...', null);
+
+    try {
+      const lastModified = getLastModified();
+      const file = await urlToFile(
+        DATA.coverUrl,
+        `jfrtik-${DATA.ownerUnique}-${DATA.videoId}-cover.png`,
+        lastModified,
+        'image/png'
+      );
+      formData.delete('cover');
+      formData.append('cover', file, file.name);
+      ensureMetaFields();
+
+      setStatus(
+        coverStatus,
+        `OK — ${file.name} (${formatBytes(file.size)})\n` +
+        `lastModified: ${new Date(file.lastModified).toISOString()}`,
+        'ok'
+      );
+      renderFileCard(coverFileEl, file, DATA.coverUrl, 'image');
+      refreshGlobalStatus();
+    } catch (err) {
+      setStatus(coverStatus, `Error: ${err.message}`, 'error');
+      resetFileCard(coverFileEl);
+    } finally {
+      disableAll(false);
+      buildCoverBtn.textContent = 'Build Cover File';
+    }
+  }
+
+  async function buildVideo() {
+    buildVideoBtn.disabled = true;
+    buildVideoBtn.textContent = 'Downloading...';
+    setStatus(videoStatus, 'Starting direct download...', null);
+
+    const filename = `jfrtik-${DATA.videoId}.mp4`;
+
+    try {
+      const lastModified = getLastModified();
+
+      const a = document.createElement('a');
+      a.href = DATA.videoUrl;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      formData.delete('videoUrl');
+      formData.append('videoUrl', DATA.canonicalUrl || DATA.videoUrl);
+      ensureMetaFields();
+
+      setStatus(
+        videoStatus,
+        `Download started: ${filename}\n` +
+        `lastModified: ${new Date(lastModified).toISOString()}\n` +
+        `Note: video bytes are NOT in FormData (Akamai blocks cloud proxies).`,
+        'ok'
+      );
+
+      videoFileEl.classList.remove('empty');
+      videoFileEl.innerHTML =
+        `<div class="name">${filename}</div>` +
+        `<div class="meta">lastModified: ${new Date(lastModified).toISOString()}</div>` +
+        `<div class="meta">Direct download — not in FormData.</div>`;
+
+      refreshGlobalStatus();
+    } catch (err) {
+      setStatus(videoStatus, `Error: ${err.message}`, 'error');
+      resetFileCard(videoFileEl);
+    } finally {
+      buildVideoBtn.disabled = false;
+      buildVideoBtn.textContent = 'Download Video';
+    }
+  }
+
+  function clearAll() {
+    ['avatar', 'cover', 'videoUrl', 'ownerUnique', 'videoId', 'createTime'].forEach(k => {
+      formData.delete(k);
+    });
+
+    setStatus(avatarStatus, 'Idle.', null);
+    setStatus(coverStatus, 'Idle.', null);
+    setStatus(videoStatus, 'Idle.', null);
+
+    resetFileCard(avatarFileEl);
+    resetFileCard(coverFileEl);
+    resetFileCard(videoFileEl);
+
+    refreshGlobalStatus();
+  }
+
+  buildAvatarBtn.addEventListener('click', buildAvatar);
+  buildCoverBtn.addEventListener('click', buildCover);
+  buildVideoBtn.addEventListener('click', buildVideo);
+  clearBtn.addEventListener('click', clearAll);
+
+  refreshGlobalStatus();
+</script>
+</body>
+</html>
