@@ -3,533 +3,1689 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>urlToFile / FormData Test</title>
+  <title>TikTok Video Downloader</title>
   <style>
     :root {
       --bg: #0f0f0f;
       --surface: #1a1a1a;
+      --surface-hover: #222;
       --text: #e0e0e0;
       --text-secondary: #aaa;
       --accent: #fe2c55;
       --accent-hover: #ff4569;
       --radius: 12px;
-      --border: #333;
+      --shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      gap: 2px;
+    }
+    header {
+      padding: 10px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-container {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-container svg {
+      width: 100%;
+      height: 100%;
+      fill: url(#logoGradient);
+    }
+    .header-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .input-wrapper {
+      padding: 5px;
+      background: var(--surface);
+      border-bottom: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+    .input-group {
+      position: relative;
+      display: flex;
+      gap: 8px;
+    }
+    input[type="url"] {
+      flex: 1;
+      padding: 8px 36px 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    input[type="url"]:focus { border-color: var(--accent); }
+    .search-clear-btn {
+      position: absolute;
+      height: 25px;
+      width: 25px;
+      top: 50%;
+      right: 72px;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0;
+    }
+    .search-clear-btn svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+    .search-clear-btn:hover { background: rgba(255,255,255,0.2); }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hover); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .icon-btn {
+      padding: 6px;
+      min-width: 32px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .icon-btn:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .info {
+      padding: 12px;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+    .info.pane {
+      display: flex;
+    }
+    .info.pane.hidden {
+      display: none;
+    }
+    .owner-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background-color: rgb(15,18,32);
+      border: 1px solid rgb(30,37,64);
+      border-radius: 12px;
+      padding: 12px;
+      position: relative;
+    }
+    .owner-left {
+      position: relative;
+      min-width: 0;
+    }
+    .owner-right {
+      min-width: 0;
+    }
+    .owner-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .avatar {
+      background-color: transparent;
+      background-image: linear-gradient(45deg,
+        rgb(245, 133, 41) 0%,
+        rgb(221, 42, 123) 45%,
+        rgb(129, 52, 175) 75%,
+        rgb(81, 91, 212) 100%);
+      display: block;
+      border-radius: 50%;
+      padding: 3px;
+    }
+    .owner-avatar {
+      display: block;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #333;
+    }
+    .owner-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .owner-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #fff;
+    }
+    .owner-unique {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .owner-location {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      left: auto;
+      bottom: auto;
+      font-size: 14px;
+      color: var(--text-secondary);
+      background: rgba(0,0,0,0.5);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .video-wrapper {
+      display: flex;
+      gap: 12px;
+      position: relative;
+    }
+    .video-left {
+      flex: 1;
+      min-width: 0;
+    }
+    .video-right {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .video-right .stats-section {
+      height: 100%;
+      overflow: hidden;
+      padding: 4px;
+      flex: 1;
+    }
+    .video-wrapper .stats-grid {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      justify-content: center;
+    }
+    .cover-container {
+      width: 100%;
+      max-width: 160px;
+      aspect-ratio: 9 / 16;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 4px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .top-badge {
+      position: absolute;
+      top: 10px;
+      left: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 8px;
+      border-radius: 20px;
+      color: rgb(255, 255, 255);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    .top-badge span {
+      background: linear-gradient(45deg, rgb(37, 244, 238), rgb(254, 44, 85));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+    }
+    .bottom-badge {
+      position: absolute;
+      bottom: 12px;
+      right: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 6px;
+      border-radius: 20px;
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    .size-badge {
+      position: absolute;
+      bottom: 12px;
+      left: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 6px;
+      border-radius: 20px;
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    .video-cover {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #222;
+    }
+    .other-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .detail-row span:first-child {
+      color: var(--text-secondary);
+    }
+    .detail-row span:last-child {
+      color: #fff;
+      font-weight: 500;
+    }
+    .stats-section {
+      margin: 0;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .owner-wrapper .stats-grid {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .owner-wrapper .stat-item {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .video-wrapper .stat-item {
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+    .stat-item {
+      background-color: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      text-align: center;
+      padding: 5px 8px;
+    }
+    .stat-value {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+    }
+    .owner-wrapper .stat-value {
+      font-size: 11px;
+    }
+    .stat-label {
+      font-size: 0.6rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .owner-wrapper .stat-label {
+      font-size: 8px;
+    }
+    .quality-selector {
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .quality-selector label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .quality-selector select {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .download-btn {
+      padding: 6px 12px;
+      font-size: 0.95rem;
+      border-radius: 8px;
+    }
+    footer {
+      padding: 8px;
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      border-top: 1px solid #333;
+      background: var(--surface);
+    }
+    .toast-error {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2d2d2d;
+      color: #ff6b6b;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .skeleton-card {
+      max-width: 400px;
+      width: 100%;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: block;
+    }
+    .skeleton-info {
+      padding: 12px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
-    h1 { font-size: 1.2rem; text-align: center; margin-bottom: 4px; }
-    .wrapper {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+    .skeleton-owner-wrapper,
+    .skeleton-video-wrapper,
+    .skeleton-other-wrapper {
+      background-color: rgb(15,18,32);
+      border: 1px solid rgb(30,37,64);
+      border-radius: 12px;
       padding: 12px;
+    }
+    .skeleton-owner-row {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 10px;
+      margin-bottom: 8px;
     }
-    .wrapper-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #fff;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
+    .skeleton-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      flex-shrink: 0;
     }
-    .section-label {
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
+    .skeleton-lines {
+      flex: 1;
     }
-    .url {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.7rem;
-      word-break: break-all;
-      color: var(--text);
-      padding: 8px;
-      background: #0a0a0a;
-      border: 1px solid var(--border);
+    .skeleton-line {
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin-bottom: 8px;
+    }
+    .skeleton-line.short { width: 60%; }
+    .skeleton-line.medium { width: 80%; }
+    .skeleton-line.large { width: 100%; }
+    .skeleton-stats-grid {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .skeleton-stat-item {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
       border-radius: 6px;
-      max-height: 90px;
-      overflow-y: auto;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
     }
-    .status {
-      font-size: 0.75rem;
-      padding: 8px;
-      border-radius: 6px;
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      color: var(--text-secondary);
-      min-height: 32px;
+    .skeleton-video-wrapper {
+      display: flex;
+      gap: 12px;
+      background: transparent;
+      border: none;
+      padding: 0;
     }
-    .status.error { color: #ff6b6b; }
-    .status.ok { color: #4ade80; }
-    .file-item {
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 0.75rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    .skeleton-cover {
+      flex: 1;
+      max-width: 160px;
+      aspect-ratio: 9 / 16;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin: 0 auto;
+    }
+    .skeleton-video-stats {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      min-height: 40px;
-      justify-content: center;
+      gap: 6px;
     }
-    .file-item.empty { color: var(--text-secondary); }
-    .file-item .name {
-      color: #fff;
-      font-weight: 600;
-      word-break: break-all;
-    }
-    .file-item .meta {
-      color: var(--text-secondary);
-      font-size: 0.7rem;
-    }
-    .thumb {
-      width: 60px;
-      height: 60px;
+    .skeleton-stat-row {
+      height: 30px;
       border-radius: 6px;
-      object-fit: cover;
-      background: #222;
-      margin-top: 4px;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
     }
-    .video-thumb {
-      width: 100%;
-      max-width: 160px;
-      aspect-ratio: 9/16;
-      border-radius: 6px;
-      background: #000;
-      margin-top: 4px;
-    }
-    button {
-      padding: 10px 14px;
+    .skeleton-other-wrapper {
+      background: transparent;
       border: none;
+      padding: 0;
+    }
+    .skeleton-detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .skeleton-detail-line {
+      width: 60px;
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    .skeleton-detail-line.long { width: 120px; }
+    .skeleton-download-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #222 25%, #2a2a2a 50%, #222 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin-top: 8px;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    #previewDuration {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    #previewDuration svg {
+      height: 13px;
+      width: 14px;
+    }
+    #detailCreated, #detailExtracted {
+      font-size: 11px !important;
+      color: var(--text-secondary);
+    }
+    .video-wrapper .stat-label {
+      text-align: right;
+    }
+    .video-wrapper .stat-value, .video-wrapper .stat-label {
+      flex: 1;
+    }
+    #tabBar {
+      display: flex;
+      padding: 4px;
+      gap: 6px;
+    }
+    #tabBar button {
+      flex: 1;
+    }
+    #tabBar button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    #tabBar button.inactive {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    #tabBar button.inactive:hover {
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+    }
+    .code-pane-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+    .code-pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .expire-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .expire-badge {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .expire-badge.expired {
+      background: rgba(255,107,107,0.15);
+      border-color: rgba(255,107,107,0.4);
+      color: #ff6b6b;
+    }
+    .code-pane-pre {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: auto;
+      max-height: 60vh;
+      flex: 1;
+    }
+    .code-copy-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
       border-radius: 8px;
       background: var(--accent);
       color: #fff;
-      font-weight: 600;
+      border: none;
       cursor: pointer;
-      font-size: 0.9rem;
-      width: 100%;
+      font-weight: 600;
     }
-    button:hover:not(:disabled) { background: var(--accent-hover); }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    button.secondary {
+    .code-copy-btn:hover { background: var(--accent-hover); }
+
+    .multi-pane-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .multi-textarea {
+      width: 100%;
+      min-height: 100px;
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      resize: vertical;
+      outline: none;
+    }
+    .multi-textarea:focus { border-color: var(--accent); }
+    .multi-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .multi-actions button { flex: 1; }
+    .multi-actions .clear-multi-btn {
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.12);
       color: var(--text-secondary);
     }
-    button.secondary:hover:not(:disabled) {
+    .multi-actions .clear-multi-btn:hover:not(:disabled) {
       background: rgba(255,255,255,0.14);
       color: #fff;
     }
-    .global-status {
-      font-size: 0.75rem;
-      padding: 10px;
-      border-radius: 8px;
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      color: var(--text);
-      max-height: 40vh;
+    .multi-results {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 55vh;
       overflow-y: auto;
+    }
+    .multi-item {
+      background: rgb(15,18,32);
+      border: 1px solid rgb(30,37,64);
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .multi-item-cover {
+      width: 60px;
+      min-width: 60px;
+      aspect-ratio: 9 / 16;
+      border-radius: 6px;
+      background: #222;
+      object-fit: cover;
+    }
+    .multi-item-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .multi-item-desc {
+      font-size: 0.78rem;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .multi-item-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+    .multi-item-stats span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .multi-item-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+    .multi-item-actions button {
+      padding: 5px 10px;
+      font-size: 0.78rem;
+    }
+    .multi-item-actions .icon-btn {
+      padding: 0;
+    }
+    .multi-item-status {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+    .multi-item-status.error { color: #ff6b6b; }
+    .multi-empty {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      padding: 12px;
     }
   </style>
 </head>
 <body>
-  <h1>urlToFile / FormData Test</h1>
-
-  <!-- AVATAR WRAPPER -->
-  <div class="wrapper">
-    <div class="wrapper-title">Avatar</div>
-
-    <div>
-      <div class="section-label">URL</div>
-      <div class="url" id="avatarUrl"></div>
+  <header>
+    <div class="header-top">
+      <div class="logo-container">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#25f4ee" />
+              <stop offset="100%" stop-color="#fe2c55" />
+            </linearGradient>
+          </defs>
+          <path d="M9 18V5l12-2v13" fill="url(#logoGradient)" />
+          <circle cx="6" cy="18" r="3" fill="url(#logoGradient)" />
+          <circle cx="18" cy="16" r="3" fill="url(#logoGradient)" />
+        </svg>
+      </div>
+      <div class="header-title">TikTok Downloader</div>
     </div>
-
-    <div>
-      <div class="section-label">Status</div>
-      <div class="status" id="avatarStatus">Idle.</div>
+  </header>
+  <div class="input-wrapper">
+    <div class="input-group">
+      <input type="url" id="urlInput" placeholder="Paste TikTok video URL" value="https://vt.tiktok.com/ZSqAY8yvd/" />
+      <button type="button" class="search-clear-btn" id="clearBtn" aria-label="Clear input">
+        <svg stroke="currentColor" fill="none" stroke-width="0" viewBox="0 0 15 15" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor"></path>
+        </svg>
+      </button>
+      <button id="fetchBtn">Fetch</button>
     </div>
-
-    <div>
-      <div class="section-label">File</div>
-      <div class="file-item empty" id="avatarFile">No file built yet.</div>
-    </div>
-
-    <button id="buildAvatarBtn">Build Avatar File</button>
   </div>
 
-  <!-- COVER WRAPPER -->
-  <div class="wrapper">
-    <div class="wrapper-title">Cover</div>
-
-    <div>
-      <div class="section-label">URL</div>
-      <div class="url" id="coverUrl"></div>
+  <main id="mainContent">
+    <div id="skeletonCard" class="skeleton-card">
+      <div class="skeleton-info">
+        <div class="skeleton-owner-wrapper">
+          <div class="skeleton-owner-row">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-lines">
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line short"></div>
+            </div>
+          </div>
+          <div class="skeleton-stats-grid">
+            <div class="skeleton-stat-item"></div>
+            <div class="skeleton-stat-item"></div>
+            <div class="skeleton-stat-item"></div>
+            <div class="skeleton-stat-item"></div>
+            <div class="skeleton-stat-item"></div>
+          </div>
+        </div>
+        <div class="skeleton-video-wrapper">
+          <div class="skeleton-cover"></div>
+          <div class="skeleton-video-stats">
+            <div class="skeleton-stat-row"></div>
+            <div class="skeleton-stat-row"></div>
+            <div class="skeleton-stat-row"></div>
+            <div class="skeleton-stat-row"></div>
+            <div class="skeleton-stat-row"></div>
+            <div class="skeleton-stat-row"></div>
+          </div>
+        </div>
+        <div class="skeleton-other-wrapper">
+          <div class="skeleton-detail-row">
+            <div class="skeleton-detail-line"></div>
+            <div class="skeleton-detail-line long"></div>
+          </div>
+          <div class="skeleton-detail-row">
+            <div class="skeleton-detail-line"></div>
+            <div class="skeleton-detail-line long"></div>
+          </div>
+          <div class="skeleton-detail-row">
+            <div class="skeleton-detail-line"></div>
+            <div class="skeleton-detail-line long"></div>
+          </div>
+          <div class="skeleton-download-btn"></div>
+        </div>
+      </div>
     </div>
 
-    <div>
-      <div class="section-label">Status</div>
-      <div class="status" id="coverStatus">Idle.</div>
-    </div>
+    <div id="resultCard" class="card">
+      <div id="pane-stat" class="info pane">
+        <div class="owner-wrapper">
+          <div class="owner-left">
+            <div class="owner-row">
+              <span class="avatar">
+                <img id="ownerAvatar" class="owner-avatar" src="" alt="avatar" />
+              </span>
+              <div class="owner-details">
+                <span id="ownerName" class="owner-name">Unknown</span>
+                <span id="ownerUnique" class="owner-unique">@unknown</span>
+              </div>
+            </div>
+          </div>
 
-    <div>
-      <div class="section-label">File</div>
-      <div class="file-item empty" id="coverFile">No file built yet.</div>
-    </div>
+          <div class="owner-right">
+            <div class="stats-section">
+              <div class="stats-grid">
+                <div class="stat-item"><div class="stat-value" id="authorFollowers">0</div><div class="stat-label">Followers</div></div>
+                <div class="stat-item"><div class="stat-value" id="authorFollowing">0</div><div class="stat-label">Following</div></div>
+                <div class="stat-item"><div class="stat-value" id="authorVideos">0</div><div class="stat-label">Videos</div></div>
+                <div class="stat-item"><div class="stat-value" id="authorHearts">0</div><div class="stat-label">Likes</div></div>
+                <div class="stat-item"><div class="stat-value" id="authorDiggs">0</div><div class="stat-label">Liked</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <button id="buildCoverBtn">Build Cover File</button>
+        <div id="detailDescRow" class="detail-row" style="display:none;">
+          <span id="detailDesc"></span>
+        </div>
+        <div class="video-wrapper">
+          <div class="video-left">
+            <div class="cover-container">
+              <img id="coverImg" class="video-cover" src="" alt="Video cover" />
+              <div class="top-badge">
+                <span>jfrTik</span>
+              </div>
+              <div class="size-badge">
+                <span id="detailSize">--</span>
+              </div>
+              <div class="bottom-badge" id="previewDuration">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span id="durationText">--:--</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-right">
+            <div class="detail-row">
+              <span style="display:none">Created</span>
+              <span id="detailCreated">--</span>
+            </div>
+            <div class="stats-section">
+              <div class="stats-grid">
+                <div class="stat-item"><div class="stat-label">Views</div><div class="stat-value" id="statViews">0</div></div>
+                <div class="stat-item"><div class="stat-label">Likes</div><div class="stat-value" id="statLikes">0</div></div>
+                <div class="stat-item"><div class="stat-label">Comments</div><div class="stat-value" id="statComments">0</div></div>
+                <div class="stat-item"><div class="stat-label">Shares</div><div class="stat-value" id="statShares">0</div></div>
+                <div class="stat-item"><div class="stat-label">Saves</div><div class="stat-value" id="statSaves">0</div></div>
+                <div class="stat-item"><div class="stat-label">Reposts</div><div class="stat-value" id="statReposts">0</div></div>
+              </div>
+            </div>
+            <div class="detail-row">
+              <span style="display:none">Extracted</span>
+              <span id="detailExtracted">--</span>
+            </div>
+          </div>
+          <div class="owner-location" id="detailCountry">--</div>
+        </div>
+
+        <div class="other-wrapper">
+          <div style="display: flex; gap: 4px; width: 100%; min-width: 0; align-items: stretch;">
+            <div id="qualitySelector" class="quality-selector" style="flex:1; min-width:0">
+              <select id="qualitySelect" style="width:100%;"></select>
+            </div>
+            <button id="downloadBtn" class="download-btn" disabled>Preparing download...</button>
+            <button id="downloadAvatarBtn" class="icon-btn" type="button" aria-label="Download avatar" title="Download avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
+              </svg>
+            </button>
+            <button id="downloadCoverBtn" class="icon-btn" type="button" aria-label="Download cover" title="Download cover">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </button>
+          </div>
+          <div id="detailCanonicalRow" class="detail-row" style="display:none;">
+            <span>Canonical URL</span>
+            <span style="display:flex; gap:8px; align-items:center;">
+              <a id="canonicalLink" href="#" target="_blank" style="color:var(--accent); text-decoration:none;">Open</a>
+              <button id="copyCanonicalBtn" style="background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Copy</button>
+            </span>
+          </div>
+          <div class="detail-row" style="display:none!important">
+            <span>secUid</span>
+            <span id="secUid" style="word-break:break-all;">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="pane-code" class="info pane hidden">
+        <div class="code-pane-wrapper">
+          <div class="code-pane-header">
+            <div class="expire-badges">
+              <span class="expire-badge" id="expireAvatarBadge">Avatar: --</span>
+              <span class="expire-badge" id="expireCoverBadge">Cover: --</span>
+              <span class="expire-badge" id="expireVideoBadge">Video: --</span>
+            </div>
+            <button id="copyCodeBtn" class="code-copy-btn" type="button">Copy</button>
+          </div>
+          <pre id="codePre" class="code-pane-pre">No data yet.</pre>
+        </div>
+      </div>
+
+      <div id="pane-multi" class="info pane hidden">
+        <div class="multi-pane-wrapper">
+          <textarea id="multiInput" class="multi-textarea" placeholder="Paste TikTok URLs (one per line)"></textarea>
+          <div class="multi-actions">
+            <button id="multiFetchBtn" type="button">Fetch All</button>
+            <button id="multiClearBtn" class="clear-multi-btn" type="button">Clear</button>
+          </div>
+          <div id="multiResults" class="multi-results">
+            <div class="multi-empty">No videos yet. Paste URLs above and click Fetch All.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="tabBar">
+    <button id="tabStatBtn" class="active" type="button">Stat</button>
+    <button id="tabCodeBtn" class="inactive" type="button">Code</button>
+    <button id="tabMultiBtn" class="inactive" type="button">Multi</button>
   </div>
 
-  <!-- VIDEO WRAPPER -->
-  <div class="wrapper">
-    <div class="wrapper-title">Video</div>
+  <footer>
+    &copy; 2026 jfrtik · Download videos for personal use only
+  </footer>
 
-    <div>
-      <div class="section-label">URL</div>
-      <div class="url" id="videoUrl"></div>
-    </div>
-
-    <div>
-      <div class="section-label">Status</div>
-      <div class="status" id="videoStatus">Idle.</div>
-    </div>
-
-    <div>
-      <div class="section-label">File</div>
-      <div class="file-item empty" id="videoFile">No file built yet.</div>
-    </div>
-
-    <button id="buildVideoBtn">Download Video</button>
-  </div>
-
-  <!-- GLOBAL CONTROLS -->
-  <div class="wrapper">
-    <div class="wrapper-title">Global</div>
-    <div class="section-label">FormData Summary</div>
-    <div class="global-status" id="globalStatus">FormData is empty.</div>
-    <button id="clearBtn" class="secondary">Clear All</button>
-  </div>
+  <div id="errorToast" class="toast-error"></div>
 
 <script>
-  const PROXY_API = 'https://cool-field-c6c0.amanuel4135.workers.dev';
+  const SCRAPE_API = 'https://jfrtik.vercel.app/api/scrape';
 
-  const DATA = {
-    ownerUnique: 'jafernegery',
-    videoId: '7627212555110337812',
-    createTime: '1775848816',
-    avatarUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/be7209757d2b95bdaec0d7e935ff3814~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=7c2804f5&x-expires=1789182000&x-signature=GJaPK2lSxerS6QsK01vWLx5bck4%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5',
-    coverUrl: 'https://p16-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oYAAKIA2Z50Arp3TxoisBi7CIAWBSwaKLEfDad~tplv-tiktokx-origin.image?dr=9636&x-expires=1789182000&x-signature=34LkylKzjwr3p9i9Zhiomr4WDvM%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5',
-    videoUrl: 'https://v16-webapp-prime.us.tiktok.com/video/tos/alisg/tos-alisg-ve-0068c800-sg/o8AjDafDoIlMjHTIaTDeXsvpZCYABEqWFQBfEA/?a=1988&bti=ODszNWYuMDE6&&bt=265&ft=aEeq8qT0mIoPD12Khe7I3wURzcAbMeF~O5&mime_type=video_mp4&rc=OGY5ZjVmNzRnNzg4NDllNkBpM3Fubmw5cnFuOjMzODczNEBeYF42NF9eXzMxMzI0MGIzYSNzNGFqMmRzbmBhLS1kMTFzcw%3D%3D&expire=1789182075&l=20260910030035735BAC8CBD953E01589F&ply_type=2&policy=2&signature=4c81ee54a84a160a0d0d0cb219bdf4a3&tk=tt_chain_token&btag=e00088000',
-    canonicalUrl: 'https://www.tiktok.com/@jafernegery/video/7627212555110337812',
-  };
-
-  const avatarUrlEl = document.getElementById('avatarUrl');
-  const coverUrlEl = document.getElementById('coverUrl');
-  const videoUrlEl = document.getElementById('videoUrl');
-
-  const avatarStatus = document.getElementById('avatarStatus');
-  const coverStatus = document.getElementById('coverStatus');
-  const videoStatus = document.getElementById('videoStatus');
-
-  const avatarFileEl = document.getElementById('avatarFile');
-  const coverFileEl = document.getElementById('coverFile');
-  const videoFileEl = document.getElementById('videoFile');
-
-  const buildAvatarBtn = document.getElementById('buildAvatarBtn');
-  const buildCoverBtn = document.getElementById('buildCoverBtn');
-  const buildVideoBtn = document.getElementById('buildVideoBtn');
+  const urlInput = document.getElementById('urlInput');
+  const fetchBtn = document.getElementById('fetchBtn');
   const clearBtn = document.getElementById('clearBtn');
-  const globalStatus = document.getElementById('globalStatus');
+  const skeletonCard = document.getElementById('skeletonCard');
+  const resultCard = document.getElementById('resultCard');
+  const errorToast = document.getElementById('errorToast');
 
-  avatarUrlEl.textContent = DATA.avatarUrl;
-  coverUrlEl.textContent = DATA.coverUrl;
-  videoUrlEl.textContent = DATA.videoUrl;
+  const coverImg = document.getElementById('coverImg');
+  const ownerAvatar = document.getElementById('ownerAvatar');
+  const ownerName = document.getElementById('ownerName');
+  const ownerUnique = document.getElementById('ownerUnique');
+  const detailCountry = document.getElementById('detailCountry');
+  const durationText = document.getElementById('durationText');
+  const detailSize = document.getElementById('detailSize');
+  const detailCreated = document.getElementById('detailCreated');
+  const detailDescRow = document.getElementById('detailDescRow');
+  const detailDesc = document.getElementById('detailDesc');
+  const detailCanonicalRow = document.getElementById('detailCanonicalRow');
+  const canonicalLink = document.getElementById('canonicalLink');
+  const copyCanonicalBtn = document.getElementById('copyCanonicalBtn');
+  const secUid = document.getElementById('secUid');
+  const statViews = document.getElementById('statViews');
+  const statLikes = document.getElementById('statLikes');
+  const statComments = document.getElementById('statComments');
+  const statShares = document.getElementById('statShares');
+  const statSaves = document.getElementById('statSaves');
+  const statReposts = document.getElementById('statReposts');
+  const authorFollowers = document.getElementById('authorFollowers');
+  const authorFollowing = document.getElementById('authorFollowing');
+  const authorVideos = document.getElementById('authorVideos');
+  const authorHearts = document.getElementById('authorHearts');
+  const authorDiggs = document.getElementById('authorDiggs');
+  const qualitySelector = document.getElementById('qualitySelector');
+  const qualitySelect = document.getElementById('qualitySelect');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const detailExtracted = document.getElementById('detailExtracted');
+  const downloadAvatarBtn = document.getElementById('downloadAvatarBtn');
+  const downloadCoverBtn = document.getElementById('downloadCoverBtn');
 
-  const formData = new FormData();
+  const paneStat = document.getElementById('pane-stat');
+  const paneCode = document.getElementById('pane-code');
+  const paneMulti = document.getElementById('pane-multi');
+  const tabStatBtn = document.getElementById('tabStatBtn');
+  const tabCodeBtn = document.getElementById('tabCodeBtn');
+  const tabMultiBtn = document.getElementById('tabMultiBtn');
+  const codePre = document.getElementById('codePre');
+  const copyCodeBtn = document.getElementById('copyCodeBtn');
 
-  function setStatus(el, msg, kind) {
-    el.textContent = msg;
-    el.classList.remove('error', 'ok');
-    if (kind === 'error') el.classList.add('error');
-    if (kind === 'ok') el.classList.add('ok');
+  const expireAvatarBadge = document.getElementById('expireAvatarBadge');
+  const expireCoverBadge = document.getElementById('expireCoverBadge');
+  const expireVideoBadge = document.getElementById('expireVideoBadge');
+
+  const multiInput = document.getElementById('multiInput');
+  const multiFetchBtn = document.getElementById('multiFetchBtn');
+  const multiClearBtn = document.getElementById('multiClearBtn');
+  const multiResults = document.getElementById('multiResults');
+
+  let currentQualities = [];
+  let currentDownloadUrl = null;
+  let toastTimeout;
+
+  let currentAvatarUrl = '';
+  let currentCoverUrl = '';
+  let currentOwnerUnique = 'unknown';
+  let currentVideoId = 'video';
+
+  let lastFullData = null;
+  let hasFetchedSingle = false;
+
+  function countryCodeToFlag(code) {
+    if (!code || typeof code !== 'string') return '';
+    const cc = code.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    const OFFSET = 0x1F1E6 - 'A'.charCodeAt(0);
+    return String.fromCodePoint(
+      cc.charCodeAt(0) + OFFSET,
+      cc.charCodeAt(1) + OFFSET
+    );
   }
 
-  function proxied(url) {
-    return `${PROXY_API}?url=${encodeURIComponent(url)}`;
+  function formatK(num) {
+    if (!num) return '0';
+    if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return num.toString();
   }
 
-  // -------------------------------------------------------------
-  // createTime (Unix seconds) → milliseconds for File.lastModified.
-  // No Date.now() fallback: if createTime is missing or invalid, we
-  // throw so the caller knows the extracted data isn't usable.
-  // -------------------------------------------------------------
-  function getLastModified() {
-    const sec = Number(DATA.createTime);
-    if (!Number.isFinite(sec) || sec <= 0) {
-      throw new Error('createTime is missing or invalid in extracted data');
-    }
-    return sec * 1000;
-  }
+  function formatFetchedDate(isoString) {
+    if (!isoString) return '--';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '--';
 
-  async function urlToFile(url, filename, lastModifiedMs, fallbackType = 'application/octet-stream') {
-    if (!url) throw new Error('Missing URL');
-    const response = await fetch(proxied(url), { mode: 'cors' });
-
-    if (!response.ok) {
-      let details = `HTTP ${response.status}`;
-      try {
-        const body = await response.json();
-        details = body.details || body.error || details;
-      } catch {
-        try { details = await response.text(); } catch {}
-      }
-      throw new Error(`Proxy failed (${response.status}): ${details}`);
-    }
-
-    const blob = await response.blob();
-    const type = blob.type || fallbackType;
-    return new File([blob], filename, {
-      type,
-      lastModified: lastModifiedMs,
+    const datePart = date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
+    const timePart = date.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${datePart}, ${timePart}`;
   }
 
-  function formatBytes(n) {
-    if (!n) return '0 B';
-    if (n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  function formatCreateTime(unixSeconds) {
+    if (unixSeconds === null || unixSeconds === undefined || unixSeconds === '') return '--';
+    const seconds = Number(unixSeconds);
+    if (!Number.isFinite(seconds) || seconds <= 0) return '--';
+
+    const date = new Date(seconds * 1000);
+    if (isNaN(date.getTime())) return '--';
+
+    const datePart = date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+    const timePart = date.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${datePart}, ${timePart}`;
   }
 
-  function renderFileCard(containerEl, file, previewUrl, kind) {
-    containerEl.classList.remove('empty');
-    containerEl.innerHTML = '';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'name';
-    nameEl.textContent = file.name;
-
-    const metaEl = document.createElement('div');
-    metaEl.className = 'meta';
-    metaEl.textContent = [
-      `type: ${file.type || '(none)'}`,
-      `size: ${formatBytes(file.size)}`,
-      `lastModified: ${new Date(file.lastModified).toISOString()}`,
-    ].join('  ·  ');
-
-    containerEl.appendChild(nameEl);
-    containerEl.appendChild(metaEl);
-
-    if (kind === 'image' && previewUrl) {
-      const img = document.createElement('img');
-      img.className = 'thumb';
-      img.src = previewUrl;
-      img.alt = file.name;
-      containerEl.appendChild(img);
-    } else if (kind === 'video' && previewUrl) {
-      const vid = document.createElement('video');
-      vid.className = 'video-thumb';
-      vid.src = previewUrl;
-      vid.controls = true;
-      vid.muted = true;
-      vid.preload = 'metadata';
-      containerEl.appendChild(vid);
-    }
+  function formatDuration(seconds) {
+    if (!seconds) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function resetFileCard(containerEl) {
-    containerEl.classList.add('empty');
-    containerEl.innerHTML = 'No file built yet.';
+  function formatSize(bytes) {
+    if (!bytes) return '--';
+    const mb = bytes / (1024 * 1024);
+    return mb.toFixed(2) + ' MB';
   }
 
-  function listFormData() {
-    let count = 0;
-    const lines = ['FormData entries:'];
-    for (const [key, value] of formData.entries()) {
-      count++;
-      if (value instanceof File) {
-        lines.push(`  ${key} = File(${value.name}, ${formatBytes(value.size)}, ${value.type})`);
-        lines.push(`      lastModified = ${new Date(value.lastModified).toISOString()}`);
-      } else {
-        lines.push(`  ${key} = ${value}`);
-      }
-    }
-    if (count === 0) return 'FormData is empty.';
-    return lines.join('\n');
+  function sanitizeFilename(name) {
+    if (!name) return 'unknown';
+    return String(name).replace(/[^a-zA-Z0-9._-]/g, '_');
   }
 
-  function refreshGlobalStatus() {
-    globalStatus.textContent = listFormData();
-  }
-
-  function ensureMetaFields() {
-    if (!formData.has('ownerUnique')) formData.append('ownerUnique', DATA.ownerUnique);
-    if (!formData.has('videoId')) formData.append('videoId', DATA.videoId);
-    if (!formData.has('createTime')) formData.append('createTime', DATA.createTime);
-  }
-
-  function disableAll(disabled) {
-    buildAvatarBtn.disabled = disabled;
-    buildCoverBtn.disabled = disabled;
-    buildVideoBtn.disabled = disabled;
-  }
-
-  async function buildAvatar() {
-    disableAll(true);
-    buildAvatarBtn.textContent = 'Building...';
-    setStatus(avatarStatus, 'Fetching avatar...', null);
-
+  function getExpireFromUrl(url) {
+    if (!url) return null;
     try {
-      const lastModified = getLastModified();
-      const file = await urlToFile(
-        DATA.avatarUrl,
-        `jfrtik-${DATA.ownerUnique}.png`,
-        lastModified,
-        'image/png'
-      );
-      formData.delete('avatar');
-      formData.append('avatar', file, file.name);
-      ensureMetaFields();
-
-      setStatus(
-        avatarStatus,
-        `OK — ${file.name} (${formatBytes(file.size)})\n` +
-        `lastModified: ${new Date(file.lastModified).toISOString()}`,
-        'ok'
-      );
-      renderFileCard(avatarFileEl, file, DATA.avatarUrl, 'image');
-      refreshGlobalStatus();
-    } catch (err) {
-      setStatus(avatarStatus, `Error: ${err.message}`, 'error');
-      resetFileCard(avatarFileEl);
-    } finally {
-      disableAll(false);
-      buildAvatarBtn.textContent = 'Build Avatar File';
+      const u = new URL(url);
+      const expire = u.searchParams.get('expire');
+      if (expire) return Number(expire);
+      const xExpires = u.searchParams.get('x-expires');
+      if (xExpires) return Number(xExpires);
+      return null;
+    } catch {
+      return null;
     }
   }
 
-  async function buildCover() {
-    disableAll(true);
-    buildCoverBtn.textContent = 'Building...';
-    setStatus(coverStatus, 'Fetching cover...', null);
+  function formatExpireRemaining(expireSec) {
+    if (!expireSec) return 'no expiry';
+    const remaining = expireSec - Date.now() / 1000;
+    if (remaining <= 0) return 'expired';
+    if (remaining < 60) return `${Math.floor(remaining)}s`;
+    if (remaining < 3600) return `${Math.floor(remaining / 60)}m`;
+    if (remaining < 86400) return `${Math.floor(remaining / 3600)}h`;
+    return `${(remaining / 86400).toFixed(1)}d`;
+  }
 
-    try {
-      const lastModified = getLastModified();
-      const file = await urlToFile(
-        DATA.coverUrl,
-        `jfrtik-${DATA.ownerUnique}-${DATA.videoId}-cover.png`,
-        lastModified,
-        'image/png'
-      );
-      formData.delete('cover');
-      formData.append('cover', file, file.name);
-      ensureMetaFields();
-
-      setStatus(
-        coverStatus,
-        `OK — ${file.name} (${formatBytes(file.size)})\n` +
-        `lastModified: ${new Date(file.lastModified).toISOString()}`,
-        'ok'
-      );
-      renderFileCard(coverFileEl, file, DATA.coverUrl, 'image');
-      refreshGlobalStatus();
-    } catch (err) {
-      setStatus(coverStatus, `Error: ${err.message}`, 'error');
-      resetFileCard(coverFileEl);
-    } finally {
-      disableAll(false);
-      buildCoverBtn.textContent = 'Build Cover File';
+  function updateExpireBadge(badgeEl, label, url) {
+    if (!badgeEl) return;
+    const exp = getExpireFromUrl(url);
+    const txt = formatExpireRemaining(exp);
+    badgeEl.textContent = `${label}: ${txt}`;
+    if (txt === 'expired') {
+      badgeEl.classList.add('expired');
+    } else {
+      badgeEl.classList.remove('expired');
     }
   }
 
-  async function buildVideo() {
-    buildVideoBtn.disabled = true;
-    buildVideoBtn.textContent = 'Downloading...';
-    setStatus(videoStatus, 'Starting direct download...', null);
-
-    const filename = `jfrtik-${DATA.videoId}.mp4`;
-
+  async function downloadImage(url, filename) {
+    if (!url) {
+      showError('Image URL not available');
+      return;
+    }
     try {
-      const lastModified = getLastModified();
-
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error('Failed to fetch image');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = DATA.videoUrl;
+      a.href = objectUrl;
       a.download = filename;
-      a.target = '_blank';
-      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-
-      formData.delete('videoUrl');
-      formData.append('videoUrl', DATA.canonicalUrl || DATA.videoUrl);
-      ensureMetaFields();
-
-      setStatus(
-        videoStatus,
-        `Download started: ${filename}\n` +
-        `lastModified: ${new Date(lastModified).toISOString()}\n` +
-        `Note: video bytes are NOT in FormData (Akamai blocks cloud proxies).`,
-        'ok'
-      );
-
-      videoFileEl.classList.remove('empty');
-      videoFileEl.innerHTML =
-        `<div class="name">${filename}</div>` +
-        `<div class="meta">lastModified: ${new Date(lastModified).toISOString()}</div>` +
-        `<div class="meta">Direct download — not in FormData.</div>`;
-
-      refreshGlobalStatus();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (err) {
-      setStatus(videoStatus, `Error: ${err.message}`, 'error');
-      resetFileCard(videoFileEl);
-    } finally {
-      buildVideoBtn.disabled = false;
-      buildVideoBtn.textContent = 'Download Video';
+      console.warn('Blob download failed, opening in new tab:', err);
+      window.open(url, '_blank');
     }
   }
 
-  function clearAll() {
-    ['avatar', 'cover', 'videoUrl', 'ownerUnique', 'videoId', 'createTime'].forEach(k => {
-      formData.delete(k);
-    });
-
-    setStatus(avatarStatus, 'Idle.', null);
-    setStatus(coverStatus, 'Idle.', null);
-    setStatus(videoStatus, 'Idle.', null);
-
-    resetFileCard(avatarFileEl);
-    resetFileCard(coverFileEl);
-    resetFileCard(videoFileEl);
-
-    refreshGlobalStatus();
+  function showSkeleton() {
+    skeletonCard.style.display = 'block';
+    resultCard.style.display = 'none';
+    hideError();
   }
 
-  buildAvatarBtn.addEventListener('click', buildAvatar);
-  buildCoverBtn.addEventListener('click', buildCover);
-  buildVideoBtn.addEventListener('click', buildVideo);
-  clearBtn.addEventListener('click', clearAll);
+  function showResult() {
+    skeletonCard.style.display = 'none';
+    resultCard.style.display = 'block';
+    hideError();
+  }
 
-  refreshGlobalStatus();
+  function showError(msg) {
+    errorToast.textContent = msg;
+    errorToast.style.display = 'block';
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      errorToast.style.display = 'none';
+    }, 4000);
+  }
+
+  function hideError() {
+    errorToast.style.display = 'none';
+  }
+
+  function toggleClearButton() {
+    if (urlInput.value.trim()) {
+      clearBtn.style.display = 'flex';
+    } else {
+      clearBtn.style.display = 'none';
+    }
+  }
+
+  function showPane(pane) {
+    tabStatBtn.classList.remove('active');
+    tabStatBtn.classList.add('inactive');
+    tabCodeBtn.classList.remove('active');
+    tabCodeBtn.classList.add('inactive');
+    tabMultiBtn.classList.remove('active');
+    tabMultiBtn.classList.add('inactive');
+
+    paneStat.classList.add('hidden');
+    paneCode.classList.add('hidden');
+    paneMulti.classList.add('hidden');
+
+    if (pane === 'stat') {
+      tabStatBtn.classList.add('active');
+      tabStatBtn.classList.remove('inactive');
+      paneStat.classList.remove('hidden');
+
+      if (hasFetchedSingle) {
+        skeletonCard.style.display = 'none';
+        resultCard.style.display = 'block';
+      } else {
+        skeletonCard.style.display = 'block';
+        resultCard.style.display = 'none';
+      }
+    } else if (pane === 'code') {
+      tabCodeBtn.classList.add('active');
+      tabCodeBtn.classList.remove('inactive');
+      paneCode.classList.remove('hidden');
+
+      if (hasFetchedSingle) {
+        skeletonCard.style.display = 'none';
+        resultCard.style.display = 'block';
+      } else {
+        skeletonCard.style.display = 'block';
+        resultCard.style.display = 'none';
+      }
+    } else if (pane === 'multi') {
+      tabMultiBtn.classList.add('active');
+      tabMultiBtn.classList.remove('inactive');
+      paneMulti.classList.remove('hidden');
+
+      skeletonCard.style.display = 'none';
+      resultCard.style.display = 'block';
+    }
+  }
+
+  tabStatBtn.addEventListener('click', () => showPane('stat'));
+  tabCodeBtn.addEventListener('click', () => showPane('code'));
+  tabMultiBtn.addEventListener('click', () => showPane('multi'));
+
+  async function fetchScrape(url) {
+    const response = await fetch(`${SCRAPE_API}?url=${encodeURIComponent(url)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch data');
+    return data;
+  }
+
+  async function fetchScrapeMultiple(urls) {
+    if (!Array.isArray(urls) || urls.length === 0) {
+      throw new Error('fetchScrapeMultiple requires a non-empty array of URLs');
+    }
+    const response = await fetch(`${SCRAPE_API}?urls=${encodeURIComponent(urls.join(','))}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch data');
+    return data;
+  }
+
+  async function fetchAllData(url) {
+    showSkeleton();
+    fetchBtn.disabled = true;
+    fetchBtn.textContent = 'Loading...';
+
+    try {
+      const data = await fetchScrape(url);
+      lastFullData = data;
+      codePre.textContent = JSON.stringify(data, null, 2);
+
+      const avatarUrl = data.author?.avatar || '';
+      const coverUrl = data.video?.[0]?.cover || '';
+      const videoUrl = data.video?.[0]?.downloadUrl
+        || data.video?.[0]?.qualities?.[0]?.urls?.[0]
+        || '';
+      updateExpireBadge(expireAvatarBadge, 'Avatar', avatarUrl);
+      updateExpireBadge(expireCoverBadge, 'Cover', coverUrl);
+      updateExpireBadge(expireVideoBadge, 'Video', videoUrl);
+
+      populateAuthorData(data.author);
+      populateVideoData(data.video[0]);
+      hasFetchedSingle = true;
+      showResult();
+    } catch (err) {
+      showError('Error: ' + err.message);
+    } finally {
+      fetchBtn.disabled = false;
+      fetchBtn.textContent = 'Fetch';
+    }
+  }
+
+  function populateAuthorData(author) {
+    if (!author) return;
+    ownerAvatar.src = author.avatar || '';
+    ownerName.textContent = author.nickname || 'Unknown';
+    ownerUnique.textContent = '@' + (author.uniqueId || 'unknown');
+    secUid.textContent = author.secUid || '--';
+
+    currentAvatarUrl = author.avatar || '';
+    currentOwnerUnique = author.uniqueId || 'unknown';
+    downloadAvatarBtn.disabled = !currentAvatarUrl;
+
+    const stats = author.stats || {};
+    authorFollowers.textContent = formatK(stats.followerCount);
+    authorFollowing.textContent = formatK(stats.followingCount);
+    authorVideos.textContent = formatK(stats.videoCount);
+    authorHearts.textContent = formatK(stats.heartCount);
+    authorDiggs.textContent = formatK(stats.diggCount);
+  }
+
+  function populateVideoData(video) {
+    if (!video) return;
+    coverImg.src = video.cover || '';
+    detailCountry.textContent = countryCodeToFlag(video.locationCreated) || '--';
+
+    durationText.textContent = formatDuration(video.duration);
+    detailSize.textContent = formatSize(video.videoSize);
+
+    detailCreated.textContent = formatCreateTime(video.createTime);
+    detailExtracted.textContent = formatFetchedDate(video.fetchedAt);
+
+    if (video.description) {
+      detailDescRow.style.display = 'flex';
+      detailDesc.textContent = video.description;
+    } else {
+      detailDescRow.style.display = 'none';
+    }
+
+    if (video.canonicalUrl) {
+      detailCanonicalRow.style.display = 'flex';
+      canonicalLink.href = video.canonicalUrl;
+      copyCanonicalBtn.onclick = () => copyText(video.canonicalUrl);
+    } else {
+      detailCanonicalRow.style.display = 'none';
+    }
+
+    const stats = video.stats || {};
+    statViews.textContent = formatK(stats.playCount);
+    statLikes.textContent = formatK(stats.diggCount);
+    statComments.textContent = formatK(stats.commentCount);
+    statShares.textContent = formatK(stats.shareCount);
+    statSaves.textContent = formatK(stats.collectCount);
+    statReposts.textContent = formatK(stats.repostCount);
+
+    currentQualities = video.qualities || [];
+    qualitySelect.innerHTML = '';
+
+    currentCoverUrl = video.cover || '';
+    currentVideoId = video.id || 'video';
+    downloadCoverBtn.disabled = !currentCoverUrl;
+
+    if (currentQualities.length > 1) {
+      currentQualities.forEach((q, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = q.label;
+        qualitySelect.appendChild(option);
+      });
+      qualitySelector.style.display = 'flex';
+      qualitySelect.onchange = (e) => {
+        const idx = parseInt(e.target.value);
+        if (currentQualities[idx] && currentQualities[idx].urls.length > 0) {
+          currentDownloadUrl = currentQualities[idx].urls[0];
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = 'Download Video';
+        }
+      };
+    } else {
+      qualitySelector.style.display = 'none';
+    }
+
+    if (currentQualities.length > 0) {
+      currentDownloadUrl = currentQualities[0].urls[0];
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = 'Download Video';
+    } else {
+      currentDownloadUrl = null;
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Preparing download...';
+    }
+
+    downloadBtn.onclick = () => {
+      if (!currentDownloadUrl) return;
+      const filename = `jfrtik-${video.id || 'video'}.mp4`;
+      const a = document.createElement('a');
+      a.href = currentDownloadUrl;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Copied to clipboard');
+    }).catch(() => {
+      alert('Failed to copy');
+    });
+  }
+
+  clearBtn.addEventListener('click', () => {
+    urlInput.value = '';
+    toggleClearButton();
+    urlInput.focus();
+    showSkeleton();
+    hasFetchedSingle = false;
+    showPane('stat');
+  });
+
+  urlInput.addEventListener('input', toggleClearButton);
+
+  fetchBtn.addEventListener('click', () => {
+    const url = urlInput.value.trim();
+    if (!url) {
+      showError('Please paste a TikTok video URL');
+      return;
+    }
+    showPane('stat');
+    fetchAllData(url);
+  });
+
+  urlInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') fetchBtn.click();
+  });
+
+  downloadAvatarBtn.addEventListener('click', () => {
+    const filename = `jfrtik-${sanitizeFilename(currentOwnerUnique)}.png`;
+    downloadImage(currentAvatarUrl, filename);
+  });
+
+  downloadCoverBtn.addEventListener('click', () => {
+    const filename = `jfrtik-${sanitizeFilename(currentOwnerUnique)}-${sanitizeFilename(currentVideoId)}-cover.png`;
+    downloadImage(currentCoverUrl, filename);
+  });
+
+  copyCodeBtn.addEventListener('click', () => {
+    const text = codePre.textContent || '';
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = copyCodeBtn.textContent;
+      copyCodeBtn.textContent = 'Copied!';
+      setTimeout(() => { copyCodeBtn.textContent = original; }, 1500);
+    }).catch(() => {
+      alert('Failed to copy');
+    });
+  });
+
+  downloadAvatarBtn.disabled = true;
+  downloadCoverBtn.disabled = true;
+
+  toggleClearButton();
+
+  function parseMultiUrls(raw) {
+    return raw
+      .split(/[\n,\s]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  function renderMultiEmpty(text) {
+    multiResults.innerHTML = `<div class="multi-empty">${text}</div>`;
+  }
+
+  function renderMultiError(url, msg) {
+    const el = document.createElement('div');
+    el.className = 'multi-item';
+    el.innerHTML = `
+      <div class="multi-item-body">
+        <div class="multi-item-desc" style="word-break:break-all;">${escapeHtml(url)}</div>
+        <div class="multi-item-status error">Error: ${escapeHtml(msg)}</div>
+      </div>
+    `;
+    multiResults.appendChild(el);
+  }
+
+  function renderMultiLoading(label) {
+    const el = document.createElement('div');
+    el.className = 'multi-item';
+    el.innerHTML = `
+      <div class="multi-item-cover"></div>
+      <div class="multi-item-body">
+        <div class="multi-item-status">Loading ${escapeHtml(label)}...</div>
+      </div>
+    `;
+    multiResults.appendChild(el);
+  }
+
+  function renderMultiItem(video, author) {
+    const item = document.createElement('div');
+    item.className = 'multi-item';
+
+    const cover = video.cover || '';
+    const desc = video.description || '(no description)';
+    const stats = video.stats || {};
+    const id = video.id || 'video';
+    const unique = author?.uniqueId || 'unknown';
+
+    const downloadUrl = video.downloadUrl
+      || (video.qualities && video.qualities[0] && video.qualities[0].urls && video.qualities[0].urls[0])
+      || '';
+
+    item.innerHTML = `
+      <img class="multi-item-cover" src="${cover}" alt="cover" loading="lazy" />
+      <div class="multi-item-body">
+        <div class="multi-item-desc">${escapeHtml(desc)}</div>
+        <div class="multi-item-stats">
+          <span>👁 ${formatK(stats.playCount)}</span>
+          <span>❤️ ${formatK(stats.diggCount)}</span>
+          <span>💬 ${formatK(stats.commentCount)}</span>
+        </div>
+        <div class="multi-item-actions">
+          <button type="button" class="multi-download-video">Download</button>
+          <button type="button" class="icon-btn multi-download-cover" title="Download cover">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+    item.querySelector('.multi-download-video').addEventListener('click', () => {
+      if (!downloadUrl) return;
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `jfrtik-${id}.mp4`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    item.querySelector('.multi-download-cover').addEventListener('click', () => {
+      if (!cover) return;
+      downloadImage(cover, `jfrtik-${sanitizeFilename(unique)}-${sanitizeFilename(id)}-cover.png`);
+    });
+
+    multiResults.appendChild(item);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function fetchMulti() {
+    const raw = multiInput.value || '';
+    const urls = parseMultiUrls(raw);
+
+    if (urls.length === 0) {
+      showError('Paste at least one TikTok URL');
+      return;
+    }
+
+    multiResults.innerHTML = '';
+    multiFetchBtn.disabled = true;
+    multiFetchBtn.textContent = 'Fetching...';
+
+    renderMultiLoading(`${urls.length} URL${urls.length > 1 ? 's' : ''}`);
+
+    try {
+      const data = await fetchScrapeMultiple(urls);
+
+      // --- Store full response for the Code pane ---
+      lastFullData = data;
+      codePre.textContent = JSON.stringify(data, null, 2);
+
+      // --- Update expire badges from first video (best-effort) ---
+      const firstVideo = data.video && data.video[0];
+      const avatarUrl = data.author?.avatar || '';
+      const coverUrl = firstVideo?.cover || '';
+      const videoUrl = firstVideo?.downloadUrl
+        || firstVideo?.qualities?.[0]?.urls?.[0]
+        || '';
+      updateExpireBadge(expireAvatarBadge, 'Avatar', avatarUrl);
+      updateExpireBadge(expireCoverBadge, 'Cover', coverUrl);
+      updateExpireBadge(expireVideoBadge, 'Video', videoUrl);
+      // ---------------------------------------------
+
+      multiResults.innerHTML = '';
+      const author = data.author || null;
+      const videos = data.video || [];
+      if (videos.length === 0) {
+        renderMultiEmpty('No videos returned.');
+      } else {
+        videos.forEach(v => renderMultiItem(v, author));
+      }
+    } catch (err) {
+      multiResults.innerHTML = '';
+      renderMultiError('Batch fetch failed', err.message);
+    } finally {
+      multiFetchBtn.disabled = false;
+      multiFetchBtn.textContent = 'Fetch All';
+    }
+  }
+
+  multiFetchBtn.addEventListener('click', fetchMulti);
+
+  multiClearBtn.addEventListener('click', () => {
+    multiInput.value = '';
+    renderMultiEmpty('No videos yet. Paste URLs above and click Fetch All.');
+  });
+
+  showPane('stat');
+
+  if (urlInput.value.trim()) {
+  } else {
+  }
 </script>
 </body>
 </html>
