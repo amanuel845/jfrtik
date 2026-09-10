@@ -3,7 +3,6 @@ const { URL } = require('url');
 const zlib = require('zlib');
 const { StringDecoder } = require('string_decoder');
 
-// fetchUrl function (unchanged)
 function fetchUrl(urlStr, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 10) {
@@ -78,7 +77,6 @@ function extractDownloaderData(html) {
       name: '__UNIVERSAL_DATA_FOR_REHYDRATION__',
       regex: /<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/,
       parser: (data) => data?.['__DEFAULT_SCOPE__']?.['webapp.video-detail']?.itemInfo?.itemStruct,
-      shareMetaParser: (data) => data?.['__DEFAULT_SCOPE__']?.['webapp.video-detail']?.shareMeta,
       canonicalParser: (data) => data?.['__DEFAULT_SCOPE__']?.['seo.abtest']?.canonical || null,
     },
     {
@@ -90,7 +88,6 @@ function extractDownloaderData(html) {
         const id = Object.keys(vm)[0];
         return id ? vm[id] : null;
       },
-      shareMetaParser: (data) => null,
       canonicalParser: (data) => null,
     },
   ];
@@ -104,7 +101,6 @@ function extractDownloaderData(html) {
       const item = pattern.parser(json);
       if (!item) continue;
 
-      // Build the data object (same as before, plus canonicalUrl)
       const data = {
         id: item.id || null,
         canonicalUrl: null,
@@ -148,22 +144,13 @@ function extractDownloaderData(html) {
         downloadUrl: null,
       };
 
-      // Extract shareMeta desc if available
-      const shareMeta = pattern.shareMetaParser ? pattern.shareMetaParser(json) : null;
-      if (shareMeta && shareMeta.desc && !data.description) {
-        data.description = shareMeta.desc;
-      }
-
-      // Extract canonical URL
       const canonical = pattern.canonicalParser ? pattern.canonicalParser(json) : null;
       if (canonical) {
         data.canonicalUrl = canonical;
       } else if (data.id && data.author.uniqueId) {
-        // Fallback construction
         data.canonicalUrl = `https://www.tiktok.com/@${data.author.uniqueId}/video/${data.id}`;
       }
 
-      // ... rest of quality extraction (unchanged) ...
       if (item.video?.bitrateInfo && item.video.bitrateInfo.length > 0) {
         for (const info of item.video.bitrateInfo) {
           const qualityLabel = info.GearName || info.definition || info.QualityType || 'unknown';
@@ -236,6 +223,10 @@ module.exports = async function handler(req, res) {
       res.end(JSON.stringify({ error: 'Video data not found' }));
       return;
     }
+
+    // Add fetched timestamp
+    data.fetchedAt = new Date().toISOString();
+
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(data));
