@@ -3,6 +3,8 @@ const { URL } = require('url');
 const zlib = require('zlib');
 const { StringDecoder } = require('string_decoder');
 
+const MAX_IDS_PER_REQUEST = 5;
+
 function fetchUrl(urlStr, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 10) {
@@ -210,6 +212,16 @@ module.exports = async function handler(req, res) {
     res.statusCode = 400;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: '"videoIds" cannot be empty' }));
+    return;
+  }
+
+  if (videoIds.length > MAX_IDS_PER_REQUEST) {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({
+      error: `Maximum ${MAX_IDS_PER_REQUEST} video IDs per request`,
+      received: videoIds.length,
+    }));
     return;
   }
 
